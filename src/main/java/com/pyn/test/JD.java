@@ -26,7 +26,9 @@ public class JD {
 
 
   private static String redirectURL = "http://order.jd.com/center/list.action";
+//  private static String redirectURL = "http://cart.jd.com/cart.action";
   private static String loginUrl = "http://passport.jd.com/uc/login";
+
   // Don't change the following URL
   private static String renRenLoginURL = "https://passport.jd.com/uc/loginService";
 
@@ -54,7 +56,6 @@ public class JD {
       }
 
     }
-    // Elements links = content.getElementsByTag("input");
     return map;
   }
 
@@ -71,6 +72,7 @@ public class JD {
     nvps.add(new BasicNameValuePair("loginname", loginname));
     nvps.add(new BasicNameValuePair("nloginpwd", loginpwd));
     nvps.add(new BasicNameValuePair("loginpwd", loginpwd));
+    nvps.add(new BasicNameValuePair("nr", "1"));
     nvps.add(new BasicNameValuePair("version", "2015"));
     String rString = String.valueOf(Math.random());
     nvps.add(new BasicNameValuePair("r", rString));
