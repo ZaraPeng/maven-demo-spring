@@ -1,8 +1,10 @@
 package com.pyn.test;
 
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -22,6 +24,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.message.BufferedHeader;
 import org.apache.http.util.EntityUtils;
+import org.codehaus.jettison.json.JSONObject;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -38,24 +41,28 @@ public class JD {
   private static String redirectURL = "http://cart.jd.com/cart.action";
   private static String loginUrl = "http://passport.jd.com/uc/login";
 
+  // 快捷下单
+  private static String easybuysubmitURL =
+      "http://easybuy.jd.com/skuDetail/newSubmitEasybuyOrder.action";
+
   // Don't change the following URL
   private static String renRenLoginURL = "https://passport.jd.com/uc/loginService";
 
   // The HttpClient is used in one session
   private HttpResponse response;
   private HttpClient httpclient = new DefaultHttpClient();
-  private String loginname = "13438389109";
-  private String loginpwd = "Pyn19881128";
+//  private String loginname = "13438389109";
+//  private String loginpwd = "Pyn19881128";
 
-  // private String loginname = "mapzchen";
-  // private String loginpwd = "9Eit8Dh54A1";
+   private String loginname = "mapzchen";
+   private String loginpwd = "9Eit8Dh54A1";
 
 
 
   /**
    * 
    * <p>
-   * Description: 获取Form表单中的nput数据
+   * Description: 登陆时获取LoginForm表单中的nput数据
    * </p>
    * 
    * @return
@@ -67,6 +74,17 @@ public class JD {
     String html = getText(loginUrl);
     // System.out.println(html);
     Document doc = Jsoup.parse(html);
+
+    // 判断是否需要输入验证码
+    Element imgDivElement = doc.getElementById("o-authcode");
+    String styleString = imgDivElement.attr("style");
+    if (styleString.contains("none")) {
+      logger.info("need input authcode");
+      authcode(doc);
+    } else {
+      logger.info("no need input authcode");
+    }
+
     // 获取uuid
     Element uuidElement = doc.getElementById("uuid");
     String uuid = uuidElement.attr("value");
@@ -130,10 +148,13 @@ public class JD {
 
   /**
    * 
-   * <p>Description: 登陆</p>
+   * <p>
+   * Description: 登陆 https://passport.jd.com/uc/loginService
+   * </p>
+   * 
    * @return
    * @author Peng Yanan
-   * @date      2016年5月31日
+   * @date 2016年5月31日
    */
   private boolean login() {
     Map<String, String> map = getParams();
@@ -170,13 +191,73 @@ public class JD {
     return true;
   }
 
-  
+
+
   /**
    * 
-   * <p>Description: 获取location信息</p>
+   * <p>
+   * Description:
+   * 快速下单，调用：http://easybuy.jd.com/skuDetail/newSubmitEasybuyOrder.action
+   * </p>
+   * 
+   * @param skuId 商品ID
+   * @param num 购买数量
+   * @author Peng Yanan
+   * @date 2016年5月31日
+   */
+  public void easybuysubmit(String skuId, String num) {
+    HttpPost httpost = new HttpPost(easybuysubmitURL);
+    // All the parameters post to the web site
+    List<BasicNameValuePair> nvps = new ArrayList<BasicNameValuePair>();
+    nvps.add(new BasicNameValuePair("callback", "easybuysubmit"));
+    nvps.add(new BasicNameValuePair("skuId", skuId));
+    nvps.add(new BasicNameValuePair("num", num));
+    BufferedReader bufferedReader = null;
+    StringBuilder entityStringBuilder = new StringBuilder();
+    try {
+      httpost.setEntity(new UrlEncodedFormEntity(
+          (List<? extends org.apache.http.NameValuePair>) nvps));
+      response = httpclient.execute(httpost);
+      // 得到httpResponse的状态响应码
+      int statusCode = response.getStatusLine().getStatusCode();
+      if (statusCode == 200) {
+        // 得到httpResponse的实体数据
+        HttpEntity httpEntity = response.getEntity();
+        if (httpEntity != null) {
+          try {
+            bufferedReader =
+                new BufferedReader(new InputStreamReader(httpEntity.getContent(), "UTF-8"),
+                    8 * 1024);
+            String line = null;
+            while ((line = bufferedReader.readLine()) != null) {
+              entityStringBuilder.append(line + "/n");
+            }
+            // 利用从HttpEntity中得到的String生成JsonObject
+            // JSONObject resultJsonObject = new JSONObject(entityStringBuilder.toString());
+            // System.out.println(resultJsonObject);
+            System.out.println(entityStringBuilder.toString());
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        }
+      }
+    } catch (Exception e) {
+      logger.error("error message", e);
+    } finally {
+      httpost.abort();
+    }
+  }
+
+
+  /**
+   * 
+   * <p>
+   * Description: 获取location信息
+   * </p>
+   * 
    * @return
    * @author Peng Yanan
-   * @date      2016年5月31日
+   * @date 2016年5月31日
    */
   private String getRedirectLocation() {
     BufferedHeader locationHeader = (BufferedHeader) response.getFirstHeader("Location");
@@ -188,11 +269,14 @@ public class JD {
 
   /**
    * 
-   * <p>Description: 抓取数据</p>
+   * <p>
+   * Description: 抓取数据
+   * </p>
+   * 
    * @param redirectLocation
    * @return
    * @author Peng Yanan
-   * @date      2016年5月31日
+   * @date 2016年5月31日
    */
   private String getText(String redirectLocation) {
     HttpGet httpget = new HttpGet(redirectLocation);
@@ -211,17 +295,25 @@ public class JD {
 
   /**
    * 
-   * <p>Description: 登陆成功后 打印跳转页面的内容</p>
+   * <p>
+   * Description: 登陆成功后 打印跳转页面的内容
+   * </p>
+   * 
    * @author Peng Yanan
-   * @date      2016年5月31日
+   * @date 2016年5月31日
    */
   public void printText() {
     if (login()) {
-      System.out.println(getText(redirectURL));
-      String redirectLocation = getRedirectLocation();
-      if (redirectLocation != null) {
-        System.out.println(getText(redirectLocation));
-      }
+//      String urlString = "http://easybuy.jd.com/skuDetail/newSubmitEasybuyOrder.action?callback=easybuysubmit&skuId=1211737&num=1";
+//      System.out.println(getText(urlString));
+//       System.out.println(getText(redirectURL));
+//       String redirectLocation = getRedirectLocation();
+//       if (redirectLocation != null) {
+//       System.out.println(getText(redirectLocation));
+//       }
+
+      // 快速下单
+      easybuysubmit("1211737", "1");
     }
   }
 
