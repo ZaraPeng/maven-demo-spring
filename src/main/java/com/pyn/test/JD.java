@@ -24,6 +24,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.message.BufferedHeader;
 import org.apache.http.util.EntityUtils;
+import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -31,6 +32,10 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class JD {
   // The configuration items
@@ -41,21 +46,17 @@ public class JD {
   private static String redirectURL = "http://cart.jd.com/cart.action";
   private static String loginUrl = "http://passport.jd.com/uc/login";
 
-  // 快捷下单
-  private static String easybuysubmitURL =
-      "http://easybuy.jd.com/skuDetail/newSubmitEasybuyOrder.action";
-
   // Don't change the following URL
   private static String renRenLoginURL = "https://passport.jd.com/uc/loginService";
 
   // The HttpClient is used in one session
   private HttpResponse response;
   private HttpClient httpclient = new DefaultHttpClient();
-//  private String loginname = "13438389109";
-//  private String loginpwd = "Pyn19881128";
+  private String loginname = "13438389109";
+  private String loginpwd = "Pyn19881128";
 
-   private String loginname = "mapzchen";
-   private String loginpwd = "9Eit8Dh54A1";
+  // private String loginname = "mapzchen";
+  // private String loginpwd = "9Eit8Dh54A1";
 
 
 
@@ -76,14 +77,15 @@ public class JD {
     Document doc = Jsoup.parse(html);
 
     // 判断是否需要输入验证码
-    Element imgDivElement = doc.getElementById("o-authcode");
-    String styleString = imgDivElement.attr("style");
-    if (styleString.contains("none")) {
-      logger.info("need input authcode");
-      authcode(doc);
-    } else {
-      logger.info("no need input authcode");
-    }
+    // Element imgDivElement = doc.getElementById("o-authcode");
+    // String styleString = imgDivElement.attr("style");
+    // if (styleString.contains("none")) {
+    // logger.info("need input authcode");
+    // authcode(doc);
+    // } else {
+    // logger.info("no need input authcode");
+    // }
+    // authcode(doc);
 
     // 获取uuid
     Element uuidElement = doc.getElementById("uuid");
@@ -101,6 +103,81 @@ public class JD {
 
     }
     return map;
+  }
+
+  /**
+   * 
+   * <p>
+   * Description: 是否显示验证码 https://passport.jd.com/uc/showAuthCode?loginName=13438389109&version=2015
+   * </p>
+   * 
+   * @return
+   * @author Peng Yanan
+   * @date 2016年6月1日
+   */
+  public Boolean showAuthCode() {
+    String url = "https://passport.jd.com/uc/showAuthCode";
+    List<BasicNameValuePair> nvps = new ArrayList<BasicNameValuePair>();
+    nvps.add(new BasicNameValuePair("loginName", loginname));
+    nvps.add(new BasicNameValuePair("version", "2105"));
+    try {
+      JSONObject resultJsonObject = new JSONObject(getHttpRequest(url, nvps));
+      return resultJsonObject.getBoolean("verifycode");
+    } catch (JSONException e) {
+      e.printStackTrace();
+    }
+    return false;
+  }
+
+  /**
+   * 
+   * <p>
+   * Description: 获取请求数据
+   * </p>
+   * 
+   * @param url
+   * @param nvps
+   * @return
+   * @author Peng Yanan
+   * @date 2016年6月1日
+   */
+  public String getHttpRequest(String url, List<BasicNameValuePair> nvps) {
+    HttpPost httpost = new HttpPost(url);
+    BufferedReader bufferedReader = null;
+    StringBuilder entityStringBuilder = new StringBuilder();
+    try {
+      httpost.setEntity(new UrlEncodedFormEntity(
+          (List<? extends org.apache.http.NameValuePair>) nvps));
+      response = httpclient.execute(httpost);
+      // 得到httpResponse的状态响应码
+      int statusCode = response.getStatusLine().getStatusCode();
+      if (statusCode == 200) {
+        // 得到httpResponse的实体数据
+        HttpEntity httpEntity = response.getEntity();
+        if (httpEntity != null) {
+          try {
+            bufferedReader =
+                new BufferedReader(new InputStreamReader(httpEntity.getContent(), "UTF-8"),
+                    8 * 1024);
+            String line = null;
+            while ((line = bufferedReader.readLine()) != null) {
+              entityStringBuilder.append(line);
+            }
+            // 利用从HttpEntity中得到的String生成JsonObject
+            // JSONObject resultJsonObject = new JSONObject(entityStringBuilder.toString());
+            // System.out.println(resultJsonObject);
+            System.out.println(entityStringBuilder.toString());
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        }
+      }
+    } catch (Exception e) {
+      logger.error("error message", e);
+    } finally {
+      httpost.abort();
+    }
+    return entityStringBuilder.toString();
   }
 
   /**
@@ -128,7 +205,7 @@ public class JD {
         BufferedOutputStream out = null;
         if (bit.length > 0) {
           try {
-            out = new BufferedOutputStream(new FileOutputStream("/authImg/authcode.jpg"));
+            out = new BufferedOutputStream(new FileOutputStream("authcode2.jpg"));
             logger.info("authcode.jpg download successfully");
             out.write(bit);
             out.flush();
@@ -156,7 +233,7 @@ public class JD {
    * @author Peng Yanan
    * @date 2016年5月31日
    */
-  private boolean login() {
+  public boolean login() {
     Map<String, String> map = getParams();
 
     HttpPost httpost = new HttpPost(renRenLoginURL);
@@ -168,8 +245,19 @@ public class JD {
     nvps.add(new BasicNameValuePair("loginpwd", loginpwd));
     nvps.add(new BasicNameValuePair("nr", "1"));
     nvps.add(new BasicNameValuePair("version", "2015"));
+
+    // 判断是否需要输入验证码
+    if (showAuthCode()) {
+      nvps.add(new BasicNameValuePair("authcode", "wxxy"));
+      logger.info("需要输入验证码，登陆失败");
+      return false;
+    }
+
+
     String rString = String.valueOf(Math.random());
     nvps.add(new BasicNameValuePair("r", rString));
+
+
     Iterator it = map.keySet().iterator();
     while (it.hasNext()) {
       String key = it.next().toString();
@@ -196,8 +284,7 @@ public class JD {
   /**
    * 
    * <p>
-   * Description:
-   * 快速下单，调用：http://easybuy.jd.com/skuDetail/newSubmitEasybuyOrder.action
+   * Description: 快速下单，调用：http://easybuy.jd.com/skuDetail/newSubmitEasybuyOrder.action
    * </p>
    * 
    * @param skuId 商品ID
@@ -206,46 +293,14 @@ public class JD {
    * @date 2016年5月31日
    */
   public void easybuysubmit(String skuId, String num) {
-    HttpPost httpost = new HttpPost(easybuysubmitURL);
+    String easybuysubmitURL = "http://easybuy.jd.com/skuDetail/newSubmitEasybuyOrder.action";
     // All the parameters post to the web site
     List<BasicNameValuePair> nvps = new ArrayList<BasicNameValuePair>();
     nvps.add(new BasicNameValuePair("callback", "easybuysubmit"));
     nvps.add(new BasicNameValuePair("skuId", skuId));
     nvps.add(new BasicNameValuePair("num", num));
-    BufferedReader bufferedReader = null;
-    StringBuilder entityStringBuilder = new StringBuilder();
-    try {
-      httpost.setEntity(new UrlEncodedFormEntity(
-          (List<? extends org.apache.http.NameValuePair>) nvps));
-      response = httpclient.execute(httpost);
-      // 得到httpResponse的状态响应码
-      int statusCode = response.getStatusLine().getStatusCode();
-      if (statusCode == 200) {
-        // 得到httpResponse的实体数据
-        HttpEntity httpEntity = response.getEntity();
-        if (httpEntity != null) {
-          try {
-            bufferedReader =
-                new BufferedReader(new InputStreamReader(httpEntity.getContent(), "UTF-8"),
-                    8 * 1024);
-            String line = null;
-            while ((line = bufferedReader.readLine()) != null) {
-              entityStringBuilder.append(line + "/n");
-            }
-            // 利用从HttpEntity中得到的String生成JsonObject
-            // JSONObject resultJsonObject = new JSONObject(entityStringBuilder.toString());
-            // System.out.println(resultJsonObject);
-            System.out.println(entityStringBuilder.toString());
-          } catch (Exception e) {
-            e.printStackTrace();
-          }
-        }
-      }
-    } catch (Exception e) {
-      logger.error("error message", e);
-    } finally {
-      httpost.abort();
-    }
+
+    getHttpRequest(easybuysubmitURL, nvps);
   }
 
 
@@ -278,7 +333,7 @@ public class JD {
    * @author Peng Yanan
    * @date 2016年5月31日
    */
-  private String getText(String redirectLocation) {
+  public String getText(String redirectLocation) {
     HttpGet httpget = new HttpGet(redirectLocation);
     ResponseHandler<String> responseHandler = new BasicResponseHandler();
     String responseBody = "";
@@ -304,13 +359,14 @@ public class JD {
    */
   public void printText() {
     if (login()) {
-//      String urlString = "http://easybuy.jd.com/skuDetail/newSubmitEasybuyOrder.action?callback=easybuysubmit&skuId=1211737&num=1";
-//      System.out.println(getText(urlString));
-//       System.out.println(getText(redirectURL));
-//       String redirectLocation = getRedirectLocation();
-//       if (redirectLocation != null) {
-//       System.out.println(getText(redirectLocation));
-//       }
+      // String urlString =
+      // "http://easybuy.jd.com/skuDetail/newSubmitEasybuyOrder.action?callback=easybuysubmit&skuId=1211737&num=1";
+      // System.out.println(getText(urlString));
+      // System.out.println(getText(redirectURL));
+      // String redirectLocation = getRedirectLocation();
+      // if (redirectLocation != null) {
+      // System.out.println(getText(redirectLocation));
+      // }
 
       // 快速下单
       easybuysubmit("1211737", "1");
