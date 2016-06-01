@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -32,10 +33,6 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class JD {
   // The configuration items
@@ -85,7 +82,9 @@ public class JD {
     // } else {
     // logger.info("no need input authcode");
     // }
-    // authcode(doc);
+
+    // 下载验证码
+    authcode(doc);
 
     // 获取uuid
     Element uuidElement = doc.getElementById("uuid");
@@ -121,7 +120,9 @@ public class JD {
     nvps.add(new BasicNameValuePair("loginName", loginname));
     nvps.add(new BasicNameValuePair("version", "2105"));
     try {
-      JSONObject resultJsonObject = new JSONObject(getHttpRequest(url, nvps));
+      String jsonString = CommonUtils.removeTojson(getHttpRequest(url, nvps));
+      logger.info("jsonString="+jsonString);
+      JSONObject resultJsonObject = new JSONObject(jsonString);
       return resultJsonObject.getBoolean("verifycode");
     } catch (JSONException e) {
       e.printStackTrace();
@@ -192,7 +193,7 @@ public class JD {
    */
   public void authcode(Document doc) {
     Element imgElement = doc.getElementById("JD_Verification1");
-    String url = "http:" + imgElement.attr("src2");
+    String url = "http:" + imgElement.attr("src2") + "&yys=" + new Date().getTime();
     System.out.println(url);
     HttpClient httpclient2 = new DefaultHttpClient();
     HttpPost httpost2 = new HttpPost(url);
@@ -205,7 +206,9 @@ public class JD {
         BufferedOutputStream out = null;
         if (bit.length > 0) {
           try {
-            out = new BufferedOutputStream(new FileOutputStream("authcode2.jpg"));
+            StringBuilder filename = new StringBuilder(String.valueOf(Math.random()));
+            filename.append(".jpg");
+            out = new BufferedOutputStream(new FileOutputStream(filename.toString()));
             logger.info("authcode.jpg download successfully");
             out.write(bit);
             out.flush();
@@ -292,7 +295,7 @@ public class JD {
    * @author Peng Yanan
    * @date 2016年5月31日
    */
-  public void easybuysubmit(String skuId, String num) {
+  public String easybuysubmit(String skuId, String num) {
     String easybuysubmitURL = "http://easybuy.jd.com/skuDetail/newSubmitEasybuyOrder.action";
     // All the parameters post to the web site
     List<BasicNameValuePair> nvps = new ArrayList<BasicNameValuePair>();
@@ -300,7 +303,16 @@ public class JD {
     nvps.add(new BasicNameValuePair("skuId", skuId));
     nvps.add(new BasicNameValuePair("num", num));
 
-    getHttpRequest(easybuysubmitURL, nvps);
+    String jsonString = CommonUtils.removeTojson(getHttpRequest(easybuysubmitURL, nvps));
+    JSONObject resultJsonObject;
+    String orderUrlString = "";
+    try {
+      resultJsonObject = new JSONObject(jsonString);
+      orderUrlString = resultJsonObject.getString("jumpUrl");
+    } catch (JSONException e) {
+      logger.error("error:", e);
+    }
+    return orderUrlString;
   }
 
 
@@ -369,12 +381,14 @@ public class JD {
       // }
 
       // 快速下单
-      easybuysubmit("1211737", "1");
+      easybuysubmit("230861", "3");
     }
   }
 
+
+
   public static void main(String[] args) {
-    JD renRen = new JD();
-    renRen.printText();
+     JD renRen = new JD();
+     renRen.printText();
   }
 }
