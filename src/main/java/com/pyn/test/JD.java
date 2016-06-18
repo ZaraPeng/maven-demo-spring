@@ -1,10 +1,12 @@
 package com.pyn.test;
 
 import java.io.BufferedOutputStream;
+import org.apache.http.NameValuePair;
 import java.io.BufferedReader;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -18,10 +20,13 @@ import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.ResponseHandler;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.message.BufferedHeader;
 import org.apache.http.util.EntityUtils;
@@ -56,6 +61,96 @@ public class JD {
   // private String loginpwd = "9Eit8Dh54A1";
 
 
+
+  /**
+   * 通过GET方式发起http请求
+   */
+  public void requestByGetMethod(String url) {
+    // 创建默认的httpClient实例
+    CloseableHttpClient httpClient = getHttpClient();
+    try {
+      // 用get方法发送http请求
+      HttpGet get = new HttpGet(url);
+      System.out.println("执行get请求:...." + get.getURI());
+      CloseableHttpResponse httpResponse = null;
+      // 发送get请求
+      httpResponse = httpClient.execute(get);
+      try {
+        // response实体
+        HttpEntity entity = httpResponse.getEntity();
+        if (null != entity) {
+          System.out.println("响应状态码:" + httpResponse.getStatusLine());
+          System.out.println("-------------------------------------------------");
+          System.out.println("响应内容:" + EntityUtils.toString(entity));
+          System.out.println("-------------------------------------------------");
+        }
+      } finally {
+        httpResponse.close();
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    } finally {
+      try {
+        closeHttpClient(httpClient);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+
+  }
+
+
+  /**
+   * POST方式发起http请求
+   */
+  public void requestByPostMethod() {
+    CloseableHttpClient httpClient = getHttpClient();
+    try {
+      HttpPost post = new HttpPost("http://localhost/...."); // 这里用上本机的某个工程做测试
+      // 创建参数列表
+      List<NameValuePair> list = new ArrayList<NameValuePair>();
+      list.add(new BasicNameValuePair("j_username", "admin"));
+      list.add(new BasicNameValuePair("j_password", "admin"));
+      // url格式编码
+      UrlEncodedFormEntity uefEntity = new UrlEncodedFormEntity(list, "UTF-8");
+      post.setEntity(uefEntity);
+      System.out.println("POST 请求...." + post.getURI());
+      // 执行请求
+      CloseableHttpResponse httpResponse = httpClient.execute(post);
+      try {
+        HttpEntity entity = httpResponse.getEntity();
+        if (null != entity) {
+          System.out.println("-------------------------------------------------------");
+          System.out.println(EntityUtils.toString(uefEntity));
+          System.out.println("-------------------------------------------------------");
+        }
+      } finally {
+        httpResponse.close();
+      }
+
+    } catch (UnsupportedEncodingException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
+      e.printStackTrace();
+    } finally {
+      try {
+        closeHttpClient(httpClient);
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+    }
+
+  }
+
+  private CloseableHttpClient getHttpClient() {
+    return HttpClients.createDefault();
+  }
+
+  private void closeHttpClient(CloseableHttpClient client) throws IOException {
+    if (client != null) {
+      client.close();
+    }
+  }
 
   /**
    * 
@@ -121,7 +216,7 @@ public class JD {
     nvps.add(new BasicNameValuePair("version", "2105"));
     try {
       String jsonString = CommonUtils.removeTojson(getHttpRequest(url, nvps));
-      logger.info("jsonString="+jsonString);
+      logger.info("jsonString=" + jsonString);
       JSONObject resultJsonObject = new JSONObject(jsonString);
       return resultJsonObject.getBoolean("verifycode");
     } catch (JSONException e) {
@@ -370,25 +465,104 @@ public class JD {
    * @date 2016年5月31日
    */
   public void printText() {
-    if (login()) {
-      // String urlString =
-      // "http://easybuy.jd.com/skuDetail/newSubmitEasybuyOrder.action?callback=easybuysubmit&skuId=1211737&num=1";
-      // System.out.println(getText(urlString));
-      // System.out.println(getText(redirectURL));
-      // String redirectLocation = getRedirectLocation();
-      // if (redirectLocation != null) {
-      // System.out.println(getText(redirectLocation));
-      // }
-
+    if (login()) {// 登陆
       // 快速下单
-      easybuysubmit("230861", "3");
+      // easybuysubmit("2888228", "1");
+      // getText("http://item.jd.com/2876449.html");
+      redirectPage();// 跳转页面
+      queue();// 排队
+      validateQuickBusy();// 验证
     }
+  }
+
+  /**
+   * 
+   * <p>
+   * Description: 抢购跳转页面
+   * </p>
+   * 
+   * @author Peng Yanan
+   * @date 2016年6月18日
+   */
+  public void redirectPage() {
+    String URL =
+        "http://divide.jd.com/user_routing?skuId=2876449&sn=f195d9e951efc5b7a4f5d5f26818b86e&from=pc";
+    requestByGetMethod(URL);
+    // All the parameters post to the web site
+    // String sn = "f195d9e951efc5b7a4f5d5f26818b86e";
+    // List<BasicNameValuePair> nvps = new ArrayList<BasicNameValuePair>();
+    // nvps.add(new BasicNameValuePair("skuId", "2876449"));
+    // nvps.add(new BasicNameValuePair("sn", sn));
+    // nvps.add(new BasicNameValuePair("from", "pc"));
+    // getHttpRequest(URL, nvps);
+  }
+
+  /**
+   * 
+   * <p>
+   * Description: 排队
+   * </p>
+   * 
+   * @author Peng Yanan
+   * @date 2016年6月18日
+   */
+  public void queue() {
+    String URL =
+        "http://bolt.jd.com/captcha.html?from=pc&skuId=2876449&sn=f195d9e951efc5b7a4f5d5f26818b86e";
+    requestByGetMethod(URL);
+    // All the parameters post to the web site
+    // String sn = "f195d9e951efc5b7a4f5d5f26818b86e";
+    // List<BasicNameValuePair> nvps = new ArrayList<BasicNameValuePair>();
+    // nvps.add(new BasicNameValuePair("from", "pc"));
+    // nvps.add(new BasicNameValuePair("skuId", "2876449"));
+    // nvps.add(new BasicNameValuePair("sn", sn));
+    // getHttpRequest(URL, nvps);
+  }
+
+  /**
+   * 
+   * <p>
+   * Description: 验证排队是否成功页面
+   * </p>
+   * 
+   * @author Peng Yanan
+   * @date 2016年6月18日
+   */
+  public void validateQuickBusy() {
+    String URL = "http://bolt.jd.com/validate/repeatGoToOrder";
+    // All the parameters post to the web site
+    String rid = "f195d9e951efc5b7a4f5d5f26818b86e";
+    List<BasicNameValuePair> nvps = new ArrayList<BasicNameValuePair>();
+    nvps.add(new BasicNameValuePair("skuId", "2876449"));
+    nvps.add(new BasicNameValuePair("rid", rid));
+    getHttpRequest(URL, nvps);
+  }
+
+  /**
+   * 
+   * <p>
+   * Description: 抢购
+   * </p>
+   * 
+   * @author Peng Yanan
+   * @date 2016年6月18日
+   */
+  public void quickBuy() {
+    String URL = "http://bolt.jd.com/seckill/seckill.action";
+    // All the parameters post to the web site
+    Long timestamp = System.currentTimeMillis() / 1000;
+    String rid = timestamp.toString() + "f195d9e951efc5b7a4f5d5f26818b86e";
+    List<BasicNameValuePair> nvps = new ArrayList<BasicNameValuePair>();
+    nvps.add(new BasicNameValuePair("skuId", "2876449"));
+    nvps.add(new BasicNameValuePair("num", "1"));
+    nvps.add(new BasicNameValuePair("rid", rid));
+    getHttpRequest(URL, nvps);
   }
 
 
 
   public static void main(String[] args) {
-     JD renRen = new JD();
-     renRen.printText();
+    JD renRen = new JD();
+    renRen.printText();
   }
 }
