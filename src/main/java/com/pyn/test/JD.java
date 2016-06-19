@@ -54,11 +54,11 @@ public class JD {
   // The HttpClient is used in one session
   private HttpResponse response;
   private HttpClient httpclient = new DefaultHttpClient();
-  private String loginname = "13438389109";
-  private String loginpwd = "Pyn19881128";
+//  private String loginname = "13438389109";
+//  private String loginpwd = "Pyn19881128";
 
-  // private String loginname = "mapzchen";
-  // private String loginpwd = "9Eit8Dh54A1";
+   private String loginname = "mapzchen";
+   private String loginpwd = "9Eit8Dh54A1";
 
 
 
@@ -397,7 +397,9 @@ public class JD {
     nvps.add(new BasicNameValuePair("callback", "easybuysubmit"));
     nvps.add(new BasicNameValuePair("skuId", skuId));
     nvps.add(new BasicNameValuePair("num", num));
-
+//    String result =getHttpRequest(easybuysubmitURL, nvps);
+//    System.out.println(result);
+//    return result;
     String jsonString = CommonUtils.removeTojson(getHttpRequest(easybuysubmitURL, nvps));
     JSONObject resultJsonObject;
     String orderUrlString = "";
@@ -467,11 +469,11 @@ public class JD {
   public void printText() {
     if (login()) {// 登陆
       // 快速下单
-      // easybuysubmit("2888228", "1");
+       easybuysubmit("2350848", "1");
       // getText("http://item.jd.com/2876449.html");
-      redirectPage();// 跳转页面
-      queue();// 排队
-      validateQuickBusy();// 验证
+//      redirectPage();// 跳转页面
+//      queue();// 排队
+//      validateQuickBusy();// 验证
     }
   }
 
@@ -487,7 +489,7 @@ public class JD {
   public void redirectPage() {
     String URL =
         "http://divide.jd.com/user_routing?skuId=2876449&sn=f195d9e951efc5b7a4f5d5f26818b86e&from=pc";
-    requestByGetMethod(URL);
+    getText(URL);
     // All the parameters post to the web site
     // String sn = "f195d9e951efc5b7a4f5d5f26818b86e";
     // List<BasicNameValuePair> nvps = new ArrayList<BasicNameValuePair>();
