@@ -469,7 +469,7 @@ public class JD {
   public void printText() {
     if (login()) {// 登陆
       // 快速下单
-       easybuysubmit("2350848", "1");
+       easybuysubmit("1914332", "1");
       // getText("http://item.jd.com/2876449.html");
 //      redirectPage();// 跳转页面
 //      queue();// 排队
