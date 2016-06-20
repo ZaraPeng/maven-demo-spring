@@ -376,9 +376,9 @@ public class JDdemo2 {
       // 快速下单
       // easybuysubmit("2888228", "1");
       // getText("http://item.jd.com/2782638.html");
-//      System.err
-//          .println("开始跳转页面---> http://divide.jd.com/user_routing?skuId=2782638&sn=d039324512cd07852b2fe4a708db7cd4&from=pc");
-//      redirectPage();// 跳转页面
+      // System.err
+      // .println("开始跳转页面---> http://divide.jd.com/user_routing?skuId=2782638&sn=d039324512cd07852b2fe4a708db7cd4&from=pc");
+      // redirectPage();// 跳转页面
       System.err
           .println("开始排队 -->http://bolt.jd.com/captcha.html?from=pc&skuId=2782638&sn=d039324512cd07852b2fe4a708db7cd4");
       queue();// 排队
@@ -435,13 +435,49 @@ public class JDdemo2 {
    * @date 2016年6月18日
    */
   public void validateQuickBusy() {
-    String URL = "http://bolt.jd.com/validate/repeatGoToOrder";
+    String URL = "http://bolt.jd.com/validate/repeatGoToOrder?skuId=2782638&sn=d039324512cd07852b2fe4a708db7cd4";
     // All the parameters post to the web site
-    String rid = "d039324512cd07852b2fe4a708db7cd4";
-    List<BasicNameValuePair> nvps = new ArrayList<BasicNameValuePair>();
-    nvps.add(new BasicNameValuePair("skuId", "2782638"));
-    nvps.add(new BasicNameValuePair("rid", rid));
-    getHttpRequest(URL, nvps);
+    // String rid = "d039324512cd07852b2fe4a708db7cd4";
+    // List<BasicNameValuePair> nvps = new ArrayList<BasicNameValuePair>();
+    // nvps.add(new BasicNameValuePair("skuId", "2782638"));
+    // nvps.add(new BasicNameValuePair("rid", rid));
+    // getHttpRequest(URL, nvps);
+    HttpPost httpost = new HttpPost(URL);
+//    httpost.setHeader("User-Agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36");
+//    httpost.setHeader("Referer", "http://bolt.jd.com/captcha.html?from=pc&skuId=2782638&sn=d039324512cd07852b2fe4a708db7cd4");
+    BufferedReader bufferedReader = null;
+    StringBuilder entityStringBuilder = new StringBuilder();
+    try {
+      // httpost.setEntity(new UrlEncodedFormEntity(
+      // (List<? extends org.apache.http.NameValuePair>) nvps));
+      response = httpclient.execute(httpost);
+      // 得到httpResponse的状态响应码
+      int statusCode = response.getStatusLine().getStatusCode();
+      if (statusCode == 200) {
+        // 得到httpResponse的实体数据
+        HttpEntity httpEntity = response.getEntity();
+        if (httpEntity != null) {
+          try {
+            bufferedReader =
+                new BufferedReader(new InputStreamReader(httpEntity.getContent(), "UTF-8"),
+                    8 * 1024);
+            String line = null;
+            while ((line = bufferedReader.readLine()) != null) {
+              entityStringBuilder.append(line);
+            }
+            // 利用从HttpEntity中得到的String生成JsonObject
+            // JSONObject resultJsonObject = new JSONObject(entityStringBuilder.toString());
+            // System.out.println(resultJsonObject);
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        }
+      }
+    } catch (Exception e) {
+      logger.error("error message", e);
+    } finally {
+      httpost.abort();
+    }
   }
 
   /**
